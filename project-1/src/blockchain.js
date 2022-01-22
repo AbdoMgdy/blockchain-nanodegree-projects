@@ -66,17 +66,18 @@ class Blockchain {
       try {
         block.time = new Date().getTime().toString().slice(0, -3);
         block.height = self.height + 1;
-        if (self.height === -1) {
-          block.previousBlockHash = null;
+        if (self.height >= 0) {
+          block.previousBlockHash = self.chain[self.height].hash;
         } else {
-          block.previousBlockHash = this.hash;
+          block.previousBlockHash = null;
         }
         this.height += 1;
         self.chain.push(block);
         block.hash = SHA256(JSON.stringify(block)).toString();
+        await self.validateChain();
         resolve(block);
       } catch (error) {
-        reject(error);
+        resolve(false);
       }
     });
   }
@@ -123,8 +124,8 @@ class Blockchain {
       let msgTime = parseInt(message.split(":")[1]);
       let currTime = parseInt(new Date().getTime().toString().slice(0, -3));
       console.log(currTime, msgTime);
-      if (currTime - msgTime > 5 * 6000) {
-        reject({ msg: "Timeout error" });
+      if (currTime - msgTime > 5 * 60) {
+        resolve(false);
       }
       let msgVerify = bitcoinMessage.verify(message, address, signature);
       let data = {
@@ -139,6 +140,7 @@ class Blockchain {
         reject({ msg: "unverified" });
       }
       await self._addBlock(block);
+      await self.validateChain();
       resolve(block);
     });
   }
@@ -203,11 +205,15 @@ class Blockchain {
   validateChain() {
     let self = this;
     let errorLog = [];
+    let prevHash = undefined;
     return new Promise(async (resolve, reject) => {
       for (const block of self.chain) {
-        if (!block.validate()) {
+        if (!prevHash) prevHash = block.hash;
+        if (!(await block.validate())) {
           errorLog.push(block);
         }
+        if (prevHash !== block.previousBlockHash) resolve(false);
+        prevHash = block.hash;
       }
       resolve(errorLog);
     });
