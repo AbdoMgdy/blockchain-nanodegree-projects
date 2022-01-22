@@ -42,13 +42,11 @@ class Block {
       self.hash = null;
       // Recalculate the hash of the Block
       const hashValue = SHA256(JSON.stringify(self)).toString();
+      self.hash = curr;
       // Comparing if the hashes changed
-      if (curr !== hashValue) {
-        // Returning the Block is not valid
-        resolve(false);
-      }
+      // Returning the Block is not valid
       // Returning the Block is valid
-      resolve(true);
+      resolve(curr !== hashValue);
     });
   }
 
