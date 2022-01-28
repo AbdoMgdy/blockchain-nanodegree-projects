@@ -215,7 +215,8 @@ class Blockchain {
         if (prevHash !== block.previousBlockHash) resolve(false);
         prevHash = block.hash;
       }
-      resolve(errorLog);
+      if (errorLog) resolve(errorLog);
+      else resolve(true);
     });
   }
 }
